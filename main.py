@@ -1,126 +1,72 @@
+# for scraping a web page to find downlaodable links of pdf files
+
+# modules we're using (you'll need to download lxml)
+import lxml.html, urllib
+import urllib.request
+from urllib.parse import urlparse
+from urllib.parse import urljoin
+import requests
 import os
-citiesContraCosta=["Antioch",
-"Brentwood",
-"Clayton",
-"Concord",
-"Town of Danville",
-"El Cerrito",
-"Hercules",
-"Lafayette",
-"Martinez",
-"Town of Moraga",
-"Oakley",
-"Orinda",
-"Pinole",
-"Pittsburg",
-"Pleasant Hill",
-"Richmond",
-"San Pablo",
-"San Ramon",
-"Walnut Creek"]
+pdf_links=[]
 
-citiesImperial=["Brawley",
-"Calexico",
-"Calipatria",
-"El Centro",
-"Holtville",
-"Imperial",
-"Westmorland"]
+# the url of the page you want to scrape
+base_url = 'http://www.imperialctc.org/about-lta/financial-reports/'
 
-citiesRiverside=[
-"Blythe",
-"Calimesa",
-"Canyon Lake",
-"Cathedral City",
-"Coachella",
-"Corona",
-"Desert Hot Springs",
-"Eastvale",
-"Hemet",
-"Indian Wells",
-"Indio",
-"Jurupa Valley",
-"La Quinta",
-"Lake Elsinore",
-"Menifee",
-"Moreno Valley",
-"Murrieta",
-"Norco",
-"Palm Desert",
-"Palm Springs",
-"Perris",
-"Rancho Mirage",
-"Riverside",
-"San Jacinto",
-"Temecula",
-"Wildomar"
-]
+# fetch the page
+res = urllib.request.urlopen(base_url)
 
-citiesSanDiego=[
-"Carlsbad",
-"Chula Vista",
-"Coronado",
-"Del Mar",
-"El Cajon",
-"Encinitas",
-"Escondido",
-"Imperial Beach",
-"La Mesa",
-"Lemon Grove",
-"National City",
-"Oceanside",
-"Poway",
-"San Diego",
-"San Marcos",
-"Santee",
-"Solana Beach",
-"Vista"
-]
+# parse the response into an xml tree
+tree = lxml.html.fromstring(res.read())
+print(tree)
 
-years=["2007-08",
-"2008-09",
-"2009-10",
-"2010-11",
-"2011-12",
-"2012-13",
-"2013-14",
-"2014-15",
-"2015-16",
-"2016-17",
-"2017-18" ]
+# construct a namespace dictionary to pass to the xpath() call
+# this lets us use regular expressions in the xpath
+ns = {'re': 'http://exslt.org/regular-expressions'}
 
-Counties=[
-    "Alameda",
-    "Orange",
-    "ContraCosta",
-    "Imperial",
-    "SanDiego",
-    "Riverside",
-    "LosAngeles",
-    "Fresno"
-]
+# iterate over all <a> tags whose href ends in ".pdf" (case-insensitive)
+for node in tree.xpath('//a[re:test(@href, "\.pdf$", "i")]', namespaces=ns):
+    
+    pdf_links.append(urljoin(base_url, node.attrib['href']))
 
 
+    
+def pdf_file_download(pdf_links): 
+    
+        path = "/Users/pdfDowload/"
 
-for j in years:
-    county=Counties[2]
-    path = "/Users/"+county+"/Local Return Spending/City Documents/"+j+"/"
-    access_rights = 0o755
-#     try:  
-#         os.mkdir(path, access_rights)
-#     except OSError:  
-#         print ("Creation of the directory %s failed" % path)
-#     else:  
-#         print ("Successfully created the directory %s" % path)
-    for i in citiesContraCosta:
-        path1 = path+i+"/"
-
-# define the access rights
+        # define the access rights
         access_rights = 0o755
         try:  
-            os.makedirs(path1, access_rights)
-            #os.rmdir(path)
+            os.mkdir(path, access_rights)
         except OSError:  
-            print ("Creation of the directory %s failed" % path1)
+            print ("Creation of the directory %s failed" % path)
         else:  
-            print ("Successfully created the directory %s" % path1)
+            print ("Successfully created the directory %s" % path)
+
+        for link in pdf_links: 
+
+            '''iterate through all links in video_links 
+            and download them one by one'''
+
+            # obtain filename by splitting url and getting  
+            # last string 
+            file_name = link.split('/')[-1]    
+
+            print ("Downloading file:%s"%file_name )
+
+            # create response object 
+            r = requests.get(link, stream = True) 
+
+            # download started 
+            with open(path+file_name, 'wb') as f: 
+                for chunk in r.iter_content(chunk_size = 1024*1024): 
+                    if chunk: 
+                        f.write(chunk) 
+
+            print ("%s downloaded!\n"%file_name)
+
+        print ("All pdf files downloaded!")
+        return
+print(pdf_links)
+# download all videos 
+pdf_file_download(pdf_links) 
